@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Homework</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<header class="student-header">
+  <h1>📚 My Homework</h1>
+  <div style="display:flex;align-items:center;gap:12px">
+    <span id="hdrName" style="font-size:13px;color:#9CA3AF"></span>
+    <button class="btn btn-ghost btn-sm" id="logoutBtn" style="color:#9CA3AF;border-color:rgba(255,255,255,.2)">Logout</button>
+  </div>
+</header>
+
+<div class="student-body">
+  <!-- Filters -->
+  <div class="filter-bar">
+    <select id="filterTopic" class="form-control">
+      <option value="">All Topics</option>
+    </select>
+    <select id="filterStatus" class="form-control">
+      <option value="">All Status</option>
+      <option value="pending">Pending</option>
+      <option value="completed">Completed</option>
+    </select>
+    <button class="btn btn-ghost btn-sm" id="clearFilters">Clear</button>
+    <span id="countLabel" style="color:var(--gray-500);font-size:13px;margin-left:auto"></span>
+  </div>
+
+  <!-- Assignments -->
+  <div class="assignments-grid" id="assignmentsList"></div>
+</div>
+
+<!-- Notes modal -->
+<div class="modal-overlay hidden" id="notesModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Mark as Completed</h2>
+      <button class="btn-icon" id="closeNotesModal">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="color:var(--gray-600);margin-bottom:12px;font-size:13px">Add optional notes about your submission:</p>
+      <div class="form-group">
+        <label>Notes (optional)</label>
+        <textarea id="completionNotes" class="form-control" placeholder="Any notes about your work…"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="cancelNotes">Cancel</button>
+      <button class="btn btn-success" id="confirmComplete">Mark Complete</button>
+    </div>
+  </div>
+</div>
+
+<script src="/js/api.js"></script>
+<script>
+  const user = API.getUser();
+  if (!user || user.role !== 'student') { location.href = '/'; }
+
+  document.getElementById('hdrName').textContent = `${user.name}${user.class_year ? ' · ' + user.class_year : ''}`;
+  document.getElementById('logoutBtn').onclick = () => { API.clearAuth(); location.href = '/'; };
+
+  let allTopics = [];
+  let pendingCompleteId = null;
+
+  function fmtDate(d) {
+    if (!d) return '';
+    const dt = new Date(d + 'T00:00:00');
+    return dt.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+  }
+
+  function isOverdue(d) {
+    if (!d) return false;
+    return new Date(d + 'T00:00:00') < new Date(new Date().toDateString());
+  }
+
+  function topicChip(a) {
+    if (!a.topic_name) return '';
+    return `<span class="topic-chip" style="background:${a.topic_color}">${a.topic_name}</span>`;
+  }
+
+  function fileIcon(mime) {
+    if (!mime) return '📎';
+    if (mime.startsWith('image/')) return '🖼️';
+    if (mime.includes('pdf')) return '📄';
+    if (mime.includes('word') || mime.includes('document')) return '📝';
+    if (mime.includes('excel') || mime.includes('spreadsheet')) return '📊';
+    if (mime.includes('powerpoint') || mime.includes('presentation')) return '📑';
+    return '📎';
+  }
+
+  function renderFiles(files) {
+    if (!files || !files.length) return '';
+    return `<div class="ac-files">
+      ${files.map(f => {
+        if (f.mimetype && f.mimetype.startsWith('image/')) {
+          return `<img src="/uploads/${escHtml(f.filename)}" alt="${escHtml(f.original_name)}"
+                       class="file-thumb" onclick="window.open('/uploads/${escHtml(f.filename)}','_blank')"
+                       title="${escHtml(f.original_name)}">`;
+        }
+        return `<a href="/uploads/${escHtml(f.filename)}" target="_blank" class="file-chip">${fileIcon(f.mimetype)} ${escHtml(f.original_name)}</a>`;
+      }).join('')}
+    </div>`;
+  }
+
+  function renderAssignments(list) {
+    const el = document.getElementById('assignmentsList');
+    document.getElementById('countLabel').textContent = `${list.length} assignment${list.length !== 1 ? 's' : ''}`;
+
+    if (!list.length) {
+      el.innerHTML = `<div class="empty-state"><div class="icon">🎉</div><p>No assignments here yet!</p></div>`;
+      return;
+    }
+
+    el.innerHTML = list.map(a => {
+      const done = a.is_completed;
+      const overdue = !done && isOverdue(a.due_date);
+      const cls = done ? 'completed' : (overdue ? 'overdue' : 'pending');
+
+      return `
+      <div class="assignment-card ${cls}" data-id="${a.id}">
+        <div class="ac-top">
+          <div>
+            <div class="ac-title">${escHtml(a.title)}</div>
+            <div class="ac-meta">
+              ${topicChip(a)}
+              ${a.due_date ? `<span class="badge ${overdue ? 'badge-danger' : (done ? 'badge-gray' : 'badge-warning')}">Due: ${fmtDate(a.due_date)}</span>` : ''}
+              ${done ? `<span class="badge badge-success">✓ Completed</span>` : ''}
+              ${overdue ? `<span class="badge badge-danger">Overdue</span>` : ''}
+            </div>
+          </div>
+          <div class="ac-actions">
+            ${done
+              ? `<button class="btn btn-ghost btn-sm" onclick="toggleComplete(${a.id}, false)">Undo</button>`
+              : `<button class="btn btn-success btn-sm" onclick="openNotesModal(${a.id})">Mark Done</button>`
+            }
+          </div>
+        </div>
+        ${a.description ? `<div class="ac-desc">${escHtml(a.description)}</div>` : ''}
+        ${renderFiles(a.files)}
+        ${a.notes ? `<div class="ac-desc" style="margin-top:8px;background:var(--success-light);padding:8px 10px;border-radius:6px;color:#065F46"><strong>Your notes:</strong> ${escHtml(a.notes)}</div>` : ''}
+        ${a.completed_at ? `<div style="font-size:12px;color:var(--gray-400);margin-top:8px">Completed on ${new Date(a.completed_at).toLocaleString()}</div>` : ''}
+        ${a.grade ? `<div class="grade-display"><span class="grade-badge">🎓 ${escHtml(String(a.grade))}</span></div>` : ''}
+        ${a.feedback ? `<div class="feedback-box"><strong>Teacher feedback:</strong> ${escHtml(a.feedback)}</div>` : ''}
+      </div>`;
+    }).join('');
+  }
+
+  function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  async function loadAssignments() {
+    const topic_id = document.getElementById('filterTopic').value;
+    const status   = document.getElementById('filterStatus').value;
+    try {
+      const data = await API.getAssignments({ topic_id, status });
+      renderAssignments(data);
+    } catch (e) {
+      document.getElementById('assignmentsList').innerHTML = `<div class="alert alert-error">${e.message}</div>`;
+    }
+  }
+
+  async function toggleComplete(id, completed) {
+    await API.completeAssignment(id, { is_completed: completed });
+    loadAssignments();
+  }
+
+  function openNotesModal(id) {
+    pendingCompleteId = id;
+    document.getElementById('completionNotes').value = '';
+    document.getElementById('notesModal').classList.remove('hidden');
+  }
+
+  document.getElementById('closeNotesModal').onclick = () => document.getElementById('notesModal').classList.add('hidden');
+  document.getElementById('cancelNotes').onclick = () => document.getElementById('notesModal').classList.add('hidden');
+  document.getElementById('confirmComplete').onclick = async () => {
+    const notes = document.getElementById('completionNotes').value.trim();
+    await API.completeAssignment(pendingCompleteId, { is_completed: true, notes });
+    document.getElementById('notesModal').classList.add('hidden');
+    loadAssignments();
+  };
+
+  document.getElementById('filterTopic').onchange = loadAssignments;
+  document.getElementById('filterStatus').onchange = loadAssignments;
+  document.getElementById('clearFilters').onclick = () => {
+    document.getElementById('filterTopic').value = '';
+    document.getElementById('filterStatus').value = '';
+    loadAssignments();
+  };
+
+  async function init() {
+    allTopics = await API.getTopics();
+    const sel = document.getElementById('filterTopic');
+    allTopics.forEach(t => {
+      const o = document.createElement('option');
+      o.value = t.id; o.textContent = t.name;
+      sel.appendChild(o);
+    });
+    loadAssignments();
+  }
+
+  init();
+</script>
+</body>
+</html>

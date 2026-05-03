@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tutor Dashboard</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div class="app-layout">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <h1>📚 Homework App</h1>
+      <p>Tutor Dashboard</p>
+    </div>
+    <nav class="sidebar-nav">
+      <button class="nav-item active" data-section="overview" onclick="showSection('overview',this)">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        Overview
+      </button>
+      <button class="nav-item" data-section="students" onclick="showSection('students',this)">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Students
+      </button>
+      <button class="nav-item" data-section="topics" onclick="showSection('topics',this)">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+        Topics
+      </button>
+      <button class="nav-item" data-section="assignments" onclick="showSection('assignments',this)">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        Assignments
+      </button>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-info">
+        <p id="sidebarName">Tutor</p>
+        <small>Tutor Account</small>
+      </div>
+      <button class="nav-item" onclick="logout()" style="margin-top:4px">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Logout
+      </button>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main-content">
+
+    <!-- ── OVERVIEW ── -->
+    <div class="page-section active" id="sec-overview">
+      <div class="page-header">
+        <div><h2>Overview</h2><p>Welcome back, <span id="welcomeName"></span></p></div>
+      </div>
+      <div class="stats-row" id="statsRow"></div>
+      <div class="card">
+        <div class="card-header"><h3>Recent Assignments</h3></div>
+        <div class="card-body" id="recentAssignments" style="padding:0"></div>
+      </div>
+    </div>
+
+    <!-- ── STUDENTS ── -->
+    <div class="page-section" id="sec-students">
+      <div class="page-header">
+        <div><h2>Students</h2><p>Manage your students and class years</p></div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <select id="yearFilter" class="form-control" onchange="loadStudents()">
+            <option value="">All Years</option>
+          </select>
+          <button class="btn btn-primary" onclick="openAddStudent()">+ Add Student</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Name</th><th>Username</th><th>Class Year</th><th>Added</th><th style="width:90px">Actions</th></tr>
+            </thead>
+            <tbody id="studentsBody">
+              <tr><td colspan="5" style="text-align:center;color:var(--gray-400);padding:32px">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── TOPICS ── -->
+    <div class="page-section" id="sec-topics">
+      <div class="page-header">
+        <div><h2>Topics</h2><p>Organise homework by subject</p></div>
+        <button class="btn btn-primary" onclick="openModal('topicModal')">+ Add Topic</button>
+      </div>
+      <div class="topics-grid" id="topicsGrid"></div>
+    </div>
+
+    <!-- ── ASSIGNMENTS ── -->
+    <div class="page-section" id="sec-assignments">
+      <div class="page-header">
+        <div><h2>Assignments</h2><p>Create and manage homework</p></div>
+        <button class="btn btn-primary" onclick="openCreateAssignment()">+ New Assignment</button>
+      </div>
+      <div class="filter-bar">
+        <select id="aFilterStudent" class="form-control" onchange="loadAssignments()"><option value="">All Students</option></select>
+        <select id="aFilterTopic"   class="form-control" onchange="loadAssignments()"><option value="">All Topics</option></select>
+        <select id="aFilterYear"    class="form-control" onchange="loadAssignments()"><option value="">All Years</option></select>
+        <select id="aFilterStatus"  class="form-control" onchange="loadAssignments()">
+          <option value="">All Status</option>
+          <option value="pending">Pending</option>
+          <option value="completed">Completed</option>
+        </select>
+        <button class="btn btn-ghost btn-sm" onclick="clearAFilters()">Clear</button>
+      </div>
+      <div class="assignments-grid" id="assignmentsList"></div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ══ MODALS ══ -->
+
+<!-- Student Modal -->
+<div class="modal-overlay hidden" id="studentModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="studentModalTitle">Add Student</h2>
+      <button class="btn-icon" onclick="closeModal('studentModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="studentFormError" class="alert alert-error" style="display:none"></div>
+      <input type="hidden" id="studentId">
+      <div class="form-group"><label>Full Name *</label><input type="text" id="studentName" class="form-control" placeholder="e.g. John Smith"></div>
+      <div class="form-group"><label>Username *</label><input type="text" id="studentUsername" class="form-control" placeholder="e.g. johnsmith"></div>
+      <div class="form-group"><label id="passwordLabel">Password *</label><input type="text" id="studentPassword" class="form-control" placeholder="Initial password"></div>
+      <div class="form-group"><label>Class Year</label><input type="text" id="studentYear" class="form-control" placeholder="e.g. Grade 10, Year 1, 2024"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('studentModal')">Cancel</button>
+      <button class="btn btn-primary" id="saveStudentBtn" onclick="saveStudent()">Add Student</button>
+    </div>
+  </div>
+</div>
+
+<!-- Topic Modal -->
+<div class="modal-overlay hidden" id="topicModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Add Topic</h2>
+      <button class="btn-icon" onclick="closeModal('topicModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="topicFormError" class="alert alert-error" style="display:none"></div>
+      <div class="form-group"><label>Topic Name *</label><input type="text" id="topicName" class="form-control" placeholder="e.g. Mathematics, English…"></div>
+      <div class="form-group">
+        <label>Colour</label>
+        <div style="display:flex;gap:10px;align-items:center">
+          <input type="color" id="topicColor" value="#4F46E5" style="width:48px;height:36px;border:1px solid var(--gray-300);border-radius:6px;cursor:pointer;padding:2px">
+          <div class="topic-chip" id="topicPreview" style="background:#4F46E5">Preview</div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('topicModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveTopic()">Add Topic</button>
+    </div>
+  </div>
+</div>
+
+<!-- Create Assignment Modal -->
+<div class="modal-overlay hidden" id="assignmentModal">
+  <div class="modal" style="max-width:580px">
+    <div class="modal-header">
+      <h2>New Assignment</h2>
+      <button class="btn-icon" onclick="closeModal('assignmentModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="assignmentFormError" class="alert alert-error" style="display:none"></div>
+      <div class="form-group"><label>Title *</label><input type="text" id="aTitle" class="form-control" placeholder="Assignment title"></div>
+      <div class="form-group"><label>Description</label><textarea id="aDesc" class="form-control" placeholder="Instructions, details…"></textarea></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="form-group"><label>Topic</label><select id="aTopic" class="form-control"></select></div>
+        <div class="form-group"><label>Due Date</label><input type="date" id="aDueDate" class="form-control"></div>
+      </div>
+      <div class="divider"></div>
+      <div class="form-group">
+        <label>Assign To</label>
+        <select id="aAssignMode" class="form-control" onchange="toggleAssignMode()">
+          <option value="class">Whole Class Year</option>
+          <option value="students">Specific Students</option>
+        </select>
+      </div>
+      <div id="classYearField" class="form-group">
+        <label>Class Year</label>
+        <select id="aClassYear" class="form-control"><option value="">— Select class year —</option></select>
+      </div>
+      <div id="studentsField" style="display:none">
+        <div class="form-group">
+          <label>Filter by Year</label>
+          <select id="studentYearFilter" class="form-control" onchange="filterStudentCheckboxes()">
+            <option value="">All Years</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Select Students</label>
+          <div class="student-list-check" id="studentCheckList"></div>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="form-group">
+        <label>Attachments (optional)</label>
+        <input type="file" id="aFiles" class="form-control" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip">
+        <small style="color:var(--gray-500);margin-top:4px;display:block">Images, PDFs, Word, Excel, PowerPoint — max 20 MB each</small>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('assignmentModal')">Cancel</button>
+      <button class="btn btn-primary" id="saveAssignmentBtn" onclick="saveAssignment()">Create Assignment</button>
+    </div>
+  </div>
+</div>
+
+<!-- Grading Modal -->
+<div class="modal-overlay hidden" id="gradingModal">
+  <div class="modal" style="max-width:680px">
+    <div class="modal-header">
+      <div>
+        <h2>📊 Grade Assignment</h2>
+        <p id="gradingTitle" style="color:var(--gray-500);font-size:13px;margin-top:2px"></p>
+      </div>
+      <button class="btn-icon" onclick="closeModal('gradingModal')">✕</button>
+    </div>
+    <div class="modal-body" id="gradingBody" style="max-height:65vh;overflow-y:auto"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('gradingModal')">Close</button>
+      <button class="btn btn-primary" id="saveAllBtn" onclick="saveAllGrades()">Save All</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Assignment Modal -->
+<div class="modal-overlay hidden" id="editAssignmentModal">
+  <div class="modal" style="max-width:540px">
+    <div class="modal-header">
+      <h2>Edit Assignment</h2>
+      <button class="btn-icon" onclick="closeModal('editAssignmentModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="editAid">
+      <div class="form-group"><label>Title *</label><input type="text" id="editATitle" class="form-control"></div>
+      <div class="form-group"><label>Description</label><textarea id="editADesc" class="form-control"></textarea></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="form-group"><label>Topic</label><select id="editATopic" class="form-control"></select></div>
+        <div class="form-group"><label>Due Date</label><input type="date" id="editADueDate" class="form-control"></div>
+      </div>
+      <div class="divider"></div>
+      <div id="editCurrentFiles" class="form-group"></div>
+      <div class="form-group">
+        <label>Add More Files</label>
+        <input type="file" id="editAFiles" class="form-control" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('editAssignmentModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="updateAssignment()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<script src="/js/api.js"></script>
+<script>
+const user = API.getUser();
+if (!user || user.role !== 'tutor') location.href = '/';
+
+document.getElementById('sidebarName').textContent = user.name;
+document.getElementById('welcomeName').textContent = user.name;
+
+function logout() { API.clearAuth(); location.href = '/'; }
+
+function escHtml(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function fmtDate(d) {
+  if (!d) return '';
+  return new Date(d + 'T00:00:00').toLocaleDateString('en-US', { year:'numeric', month:'short', day:'numeric' });
+}
+
+function isOverdue(d) {
+  if (!d) return false;
+  return new Date(d + 'T00:00:00') < new Date(new Date().toDateString());
+}
+
+function fileIcon(mime) {
+  if (!mime) return '📎';
+  if (mime.startsWith('image/')) return '🖼️';
+  if (mime.includes('pdf')) return '📄';
+  if (mime.includes('word') || mime.includes('document')) return '📝';
+  if (mime.includes('excel') || mime.includes('spreadsheet')) return '📊';
+  if (mime.includes('powerpoint') || mime.includes('presentation')) return '📑';
+  return '📎';
+}
+
+function renderFiles(files, assignmentId, allowDelete) {
+  if (!files || !files.length) return '';
+  return `<div class="ac-files">
+    ${files.map(f => {
+      const isImg = f.mimetype && f.mimetype.startsWith('image/');
+      const inner = isImg
+        ? `<img src="/uploads/${escHtml(f.filename)}" alt="${escHtml(f.original_name)}" class="file-thumb" onclick="window.open('/uploads/${escHtml(f.filename)}','_blank')">`
+        : `<a href="/uploads/${escHtml(f.filename)}" target="_blank" class="file-chip">${fileIcon(f.mimetype)} ${escHtml(f.original_name)}</a>`;
+      const del = allowDelete
+        ? `<button class="btn-icon" style="font-size:11px;margin-left:2px" title="Delete file" onclick="deleteFile(${assignmentId},${f.id},this)">✕</button>`
+        : '';
+      return `<div style="display:flex;align-items:center;gap:2px">${inner}${del}</div>`;
+    }).join('')}
+  </div>`;
+}
+
+// ── Section nav ──
+function showSection(id, btn) {
+  document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+  document.getElementById('sec-' + id).classList.add('active');
+  btn.classList.add('active');
+  if (id === 'overview')    loadOverview();
+  if (id === 'students')    loadStudents();
+  if (id === 'topics')      loadTopics();
+  if (id === 'assignments') { loadAssignmentFilters(); loadAssignments(); }
+}
+
+function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
+function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+let allStudents = [], allTopics = [], allYears = [];
+
+// ══ OVERVIEW ══
+async function loadOverview() {
+  const [students, topics, assignments] = await Promise.all([API.getStudents(), API.getTopics(), API.getAssignments()]);
+  const pending = assignments.filter(a => a.students && a.students.some(s => !s.is_completed));
+  document.getElementById('statsRow').innerHTML = `
+    <div class="stat-card"><div class="stat-icon">👨‍🎓</div><div class="stat-label">Students</div><div class="stat-value">${students.length}</div></div>
+    <div class="stat-card"><div class="stat-icon">📝</div><div class="stat-label">Assignments</div><div class="stat-value">${assignments.length}</div></div>
+    <div class="stat-card"><div class="stat-icon">🏷️</div><div class="stat-label">Topics</div><div class="stat-value">${topics.length}</div></div>
+    <div class="stat-card"><div class="stat-icon">⏳</div><div class="stat-label">Has Pending</div><div class="stat-value">${pending.length}</div></div>
+  `;
+  const recent = assignments.slice(0, 5);
+  document.getElementById('recentAssignments').innerHTML = recent.length
+    ? `<table><thead><tr><th>Title</th><th>Topic</th><th>Year</th><th>Due</th><th>Assigned</th></tr></thead><tbody>
+        ${recent.map(a => `<tr>
+          <td><strong>${escHtml(a.title)}</strong></td>
+          <td>${a.topic_name ? `<span class="topic-chip" style="background:${a.topic_color}">${escHtml(a.topic_name)}</span>` : '—'}</td>
+          <td>${a.class_year ? `<span class="badge badge-primary">${escHtml(a.class_year)}</span>` : '—'}</td>
+          <td>${a.due_date ? fmtDate(a.due_date) : '—'}</td>
+          <td>${a.students ? a.students.length : 0}</td>
+        </tr>`).join('')}
+       </tbody></table>`
+    : `<div class="empty-state"><div class="icon">📋</div><p>No assignments yet</p></div>`;
+}
+
+// ══ STUDENTS ══
+async function loadStudents() {
+  const year = document.getElementById('yearFilter').value;
+  allStudents = await API.getStudents(year || undefined);
+  allYears = await API.getClassYears();
+
+  const sel = document.getElementById('yearFilter');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">All Years</option>' + allYears.map(y => `<option value="${escHtml(y)}" ${y===cur?'selected':''}>${escHtml(y)}</option>`).join('');
+
+  const tbody = document.getElementById('studentsBody');
+  if (!allStudents.length) {
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--gray-400);padding:32px">No students yet. Click "+ Add Student" to begin.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = allStudents.map(s => `
+    <tr>
+      <td><strong>${escHtml(s.name)}</strong></td>
+      <td style="color:var(--gray-500)">${escHtml(s.username)}</td>
+      <td>${s.class_year ? `<span class="badge badge-primary">${escHtml(s.class_year)}</span>` : '<span style="color:var(--gray-400)">—</span>'}</td>
+      <td style="color:var(--gray-500)">${new Date(s.created_at).toLocaleDateString()}</td>
+      <td>
+        <button class="btn-icon" title="Edit" onclick='editStudent(${JSON.stringify(s)})'>✏️</button>
+        <button class="btn-icon" title="Delete" onclick="deleteStudent(${s.id},'${escHtml(s.name)}')">🗑️</button>
+      </td>
+    </tr>`).join('');
+}
+
+function openAddStudent() {
+  document.getElementById('studentModalTitle').textContent = 'Add Student';
+  document.getElementById('saveStudentBtn').textContent = 'Add Student';
+  document.getElementById('studentId').value = '';
+  document.getElementById('studentName').value = '';
+  document.getElementById('studentUsername').value = '';
+  document.getElementById('studentUsername').disabled = false;
+  document.getElementById('studentPassword').value = '';
+  document.getElementById('studentYear').value = '';
+  document.getElementById('passwordLabel').textContent = 'Password *';
+  document.getElementById('studentFormError').style.display = 'none';
+  openModal('studentModal');
+}
+
+function editStudent(s) {
+  document.getElementById('studentModalTitle').textContent = 'Edit Student';
+  document.getElementById('saveStudentBtn').textContent = 'Save Changes';
+  document.getElementById('studentId').value = s.id;
+  document.getElementById('studentName').value = s.name;
+  document.getElementById('studentUsername').value = s.username;
+  document.getElementById('studentUsername').disabled = true;
+  document.getElementById('studentPassword').value = '';
+  document.getElementById('studentYear').value = s.class_year || '';
+  document.getElementById('passwordLabel').textContent = 'New Password (leave blank to keep)';
+  document.getElementById('studentFormError').style.display = 'none';
+  openModal('studentModal');
+}
+
+async function saveStudent() {
+  const errEl = document.getElementById('studentFormError');
+  errEl.style.display = 'none';
+  const id        = document.getElementById('studentId').value;
+  const name      = document.getElementById('studentName').value.trim();
+  const username  = document.getElementById('studentUsername').value.trim();
+  const password  = document.getElementById('studentPassword').value;
+  const class_year = document.getElementById('studentYear').value.trim();
+  if (!name) { errEl.textContent = 'Name is required'; errEl.style.display='block'; return; }
+  if (!id && !username) { errEl.textContent = 'Username is required'; errEl.style.display='block'; return; }
+  if (!id && !password) { errEl.textContent = 'Password is required'; errEl.style.display='block'; return; }
+  try {
+    if (id) await API.updateStudent(id, { name, class_year, ...(password ? { password } : {}) });
+    else    await API.createStudent({ username, password, name, class_year });
+    closeModal('studentModal');
+    loadStudents();
+    refreshYears();
+  } catch (e) { errEl.textContent = e.message; errEl.style.display = 'block'; }
+}
+
+async function deleteStudent(id, name) {
+  if (!confirm(`Delete student "${name}"? They will be removed from all assignments.`)) return;
+  await API.deleteStudent(id);
+  loadStudents();
+}
+
+// ══ TOPICS ══
+async function loadTopics() {
+  allTopics = await API.getTopics();
+  const grid = document.getElementById('topicsGrid');
+  if (!allTopics.length) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="icon">🏷️</div><p>No topics yet.</p></div>`;
+    return;
+  }
+  grid.innerHTML = allTopics.map(t => `
+    <div class="topic-card" style="background:${t.color}">
+      <span class="topic-name">${escHtml(t.name)}</span>
+      <button class="btn-icon" onclick="deleteTopic(${t.id},'${escHtml(t.name)}')" title="Delete">✕</button>
+    </div>`).join('');
+}
+
+document.getElementById('topicColor').addEventListener('input', e => {
+  document.getElementById('topicPreview').style.background = e.target.value;
+  document.getElementById('topicPreview').textContent = document.getElementById('topicName').value || 'Preview';
+});
+document.getElementById('topicName').addEventListener('input', e => {
+  document.getElementById('topicPreview').textContent = e.target.value || 'Preview';
+});
+
+async function saveTopic() {
+  const errEl = document.getElementById('topicFormError');
+  errEl.style.display = 'none';
+  const name = document.getElementById('topicName').value.trim();
+  if (!name) { errEl.textContent = 'Topic name is required'; errEl.style.display='block'; return; }
+  try {
+    await API.createTopic({ name, color: document.getElementById('topicColor').value });
+    document.getElementById('topicName').value = '';
+    closeModal('topicModal');
+    loadTopics();
+  } catch (e) { errEl.textContent = e.message; errEl.style.display = 'block'; }
+}
+
+async function deleteTopic(id, name) {
+  if (!confirm(`Delete topic "${name}"?`)) return;
+  await API.deleteTopic(id);
+  loadTopics();
+}
+
+// ══ ASSIGNMENTS ══
+async function refreshYears() {
+  allYears = await API.getClassYears();
+  // Repopulate all year dropdowns
+  ['aFilterYear', 'aClassYear', 'studentYearFilter'].forEach(selId => {
+    const sel = document.getElementById(selId);
+    if (!sel) return;
+    const cur = sel.value;
+    const base = selId === 'aClassYear' ? '<option value="">— Select class year —</option>' : '<option value="">All Years</option>';
+    sel.innerHTML = base + allYears.map(y => `<option value="${escHtml(y)}" ${y===cur?'selected':''}>${escHtml(y)}</option>`).join('');
+  });
+}
+
+async function loadAssignmentFilters() {
+  [allStudents, allTopics, allYears] = await Promise.all([API.getStudents(), API.getTopics(), API.getClassYears()]);
+
+  const aStu = document.getElementById('aFilterStudent');
+  aStu.innerHTML = '<option value="">All Students</option>' +
+    allStudents.map(s => `<option value="${s.id}">${escHtml(s.name)}${s.class_year ? ' ('+escHtml(s.class_year)+')' : ''}</option>`).join('');
+
+  const aTop = document.getElementById('aFilterTopic');
+  aTop.innerHTML = '<option value="">All Topics</option>' +
+    allTopics.map(t => `<option value="${t.id}">${escHtml(t.name)}</option>`).join('');
+
+  // Populate all year-related selects
+  ['aFilterYear', 'aClassYear', 'studentYearFilter'].forEach(selId => {
+    const sel = document.getElementById(selId);
+    if (!sel) return;
+    const base = selId === 'aClassYear' ? '<option value="">— Select class year —</option>' : '<option value="">All Years</option>';
+    sel.innerHTML = base + allYears.map(y => `<option value="${escHtml(y)}">${escHtml(y)}</option>`).join('');
+  });
+
+  // Topic selects for modals
+  ['aTopic', 'editATopic'].forEach(selId => {
+    document.getElementById(selId).innerHTML =
+      '<option value="">— No topic —</option>' +
+      allTopics.map(t => `<option value="${t.id}">${escHtml(t.name)}</option>`).join('');
+  });
+
+  // Student checkboxes for create modal
+  document.getElementById('studentCheckList').innerHTML = allStudents.map(s => `
+    <label>
+      <input type="checkbox" name="assignStudent" value="${s.id}" data-year="${escHtml(s.class_year||'')}">
+      ${escHtml(s.name)}${s.class_year ? ` <span style="color:var(--gray-400)">(${escHtml(s.class_year)})</span>` : ''}
+    </label>`).join('');
+}
+
+function filterStudentCheckboxes() {
+  const year = document.getElementById('studentYearFilter').value;
+  document.querySelectorAll('#studentCheckList label').forEach(label => {
+    const input = label.querySelector('input');
+    label.style.display = (!year || input.dataset.year === year) ? '' : 'none';
+  });
+}
+
+async function loadAssignments() {
+  const filters = {
+    student_id: document.getElementById('aFilterStudent').value,
+    topic_id:   document.getElementById('aFilterTopic').value,
+    class_year: document.getElementById('aFilterYear').value,
+    status:     document.getElementById('aFilterStatus').value,
+  };
+  const list = await API.getAssignments(filters);
+  renderAssignmentsList(list);
+}
+
+function renderAssignmentsList(list) {
+  const el = document.getElementById('assignmentsList');
+  if (!list.length) {
+    el.innerHTML = `<div class="empty-state"><div class="icon">📋</div><p>No assignments found</p></div>`;
+    return;
+  }
+  el.innerHTML = list.map(a => {
+    const overdue = isOverdue(a.due_date);
+    const allDone = a.students && a.students.length && a.students.every(s => s.is_completed);
+    const cls     = allDone ? 'completed' : (overdue ? 'overdue' : 'pending');
+    const doneCount = a.students ? a.students.filter(s => s.is_completed).length : 0;
+    const total     = a.students ? a.students.length : 0;
+
+    return `
+    <div class="assignment-card ${cls}">
+      <div class="ac-top">
+        <div style="flex:1">
+          <div class="ac-title">${escHtml(a.title)}</div>
+          <div class="ac-meta">
+            ${a.topic_name ? `<span class="topic-chip" style="background:${a.topic_color}">${escHtml(a.topic_name)}</span>` : ''}
+            ${a.class_year ? `<span class="badge badge-primary">${escHtml(a.class_year)}</span>` : ''}
+            ${a.due_date   ? `<span class="badge ${overdue && !allDone ? 'badge-danger' : 'badge-gray'}">Due: ${fmtDate(a.due_date)}</span>` : ''}
+            ${total        ? `<span class="badge badge-gray">${doneCount}/${total} done</span>` : ''}
+          </div>
+        </div>
+        <div class="ac-actions">
+          <button class="btn btn-ghost btn-sm" title="Grade students" onclick='openGradingModal(${a.id}, "${escHtml(a.title)}")'>📊 Grade</button>
+          <button class="btn-icon" title="Edit" onclick='openEditAssignment(${JSON.stringify(a)})'>✏️</button>
+          <button class="btn-icon" title="Delete" onclick="deleteAssignment(${a.id},'${escHtml(a.title)}')">🗑️</button>
+        </div>
+      </div>
+      ${a.description ? `<div class="ac-desc">${escHtml(a.description)}</div>` : ''}
+      ${a.students && a.students.length ? `
+        <div class="ac-students">
+          ${a.students.map(s => `<span class="ac-student-chip ${s.is_completed?'done':''}">${s.is_completed?'✓ ':''}${escHtml(s.name)}</span>`).join('')}
+        </div>` : ''}
+      ${renderFiles(a.files, a.id, true)}
+    </div>`;
+  }).join('');
+}
+
+function clearAFilters() {
+  ['aFilterStudent','aFilterTopic','aFilterYear','aFilterStatus'].forEach(id => document.getElementById(id).value = '');
+  loadAssignments();
+}
+
+function toggleAssignMode() {
+  const mode = document.getElementById('aAssignMode').value;
+  document.getElementById('classYearField').style.display = mode === 'class'    ? 'block' : 'none';
+  document.getElementById('studentsField').style.display  = mode === 'students' ? 'block' : 'none';
+}
+
+async function openCreateAssignment() {
+  // Always fetch fresh topics so newly-created topics appear in the dropdown
+  allTopics = await API.getTopics();
+  ['aTopic', 'editATopic'].forEach(selId => {
+    document.getElementById(selId).innerHTML =
+      '<option value="">— No topic —</option>' +
+      allTopics.map(t => `<option value="${t.id}">${escHtml(t.name)}</option>`).join('');
+  });
+
+  document.getElementById('aTitle').value = '';
+  document.getElementById('aDesc').value = '';
+  document.getElementById('aTopic').value = '';
+  document.getElementById('aDueDate').value = '';
+  document.getElementById('aAssignMode').value = 'class';
+  document.getElementById('aFiles').value = '';
+  document.getElementById('assignmentFormError').style.display = 'none';
+  toggleAssignMode();
+  document.querySelectorAll('input[name="assignStudent"]').forEach(c => c.checked = false);
+  document.getElementById('studentYearFilter').value = '';
+  filterStudentCheckboxes();
+  openModal('assignmentModal');
+}
+
+async function saveAssignment() {
+  const errEl = document.getElementById('assignmentFormError');
+  errEl.style.display = 'none';
+  const title = document.getElementById('aTitle').value.trim();
+  if (!title) { errEl.textContent = 'Title is required'; errEl.style.display='block'; return; }
+
+  const mode = document.getElementById('aAssignMode').value;
+  let class_year = null, student_ids = [];
+
+  if (mode === 'class') {
+    class_year = document.getElementById('aClassYear').value;
+    if (!class_year) { errEl.textContent = 'Please select a class year'; errEl.style.display='block'; return; }
+  } else {
+    student_ids = [...document.querySelectorAll('input[name="assignStudent"]:checked')].map(c => Number(c.value));
+    if (!student_ids.length) { errEl.textContent = 'Please select at least one student'; errEl.style.display='block'; return; }
+  }
+
+  const btn = document.getElementById('saveAssignmentBtn');
+  btn.disabled = true; btn.textContent = 'Creating…';
+  try {
+    const { id } = await API.createAssignment({
+      title,
+      description: document.getElementById('aDesc').value.trim(),
+      topic_id:    document.getElementById('aTopic').value || null,
+      due_date:    document.getElementById('aDueDate').value || null,
+      class_year, student_ids,
+    });
+
+    const files = document.getElementById('aFiles').files;
+    if (files.length) {
+      const fd = new FormData();
+      for (const f of files) fd.append('files', f);
+      await API.uploadFiles(id, fd);
+    }
+
+    closeModal('assignmentModal');
+    loadAssignments();
+  } catch (e) {
+    errEl.textContent = e.message; errEl.style.display = 'block';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Create Assignment';
+  }
+}
+
+function openEditAssignment(a) {
+  document.getElementById('editAid').value = a.id;
+  document.getElementById('editATitle').value = a.title;
+  document.getElementById('editADesc').value = a.description || '';
+  document.getElementById('editATopic').value = a.topic_id || '';
+  document.getElementById('editADueDate').value = a.due_date || '';
+  document.getElementById('editAFiles').value = '';
+
+  const filesContainer = document.getElementById('editCurrentFiles');
+  if (a.files && a.files.length) {
+    filesContainer.innerHTML = `<label>Current Attachments</label>` + renderFiles(a.files, a.id, true);
+  } else {
+    filesContainer.innerHTML = '';
+  }
+  openModal('editAssignmentModal');
+}
+
+async function updateAssignment() {
+  const id = document.getElementById('editAid').value;
+  await API.updateAssignment(id, {
+    title:       document.getElementById('editATitle').value.trim(),
+    description: document.getElementById('editADesc').value.trim(),
+    topic_id:    document.getElementById('editATopic').value || null,
+    due_date:    document.getElementById('editADueDate').value || null,
+  });
+
+  const files = document.getElementById('editAFiles').files;
+  if (files.length) {
+    const fd = new FormData();
+    for (const f of files) fd.append('files', f);
+    await API.uploadFiles(id, fd);
+  }
+
+  closeModal('editAssignmentModal');
+  loadAssignments();
+}
+
+async function deleteAssignment(id, title) {
+  if (!confirm(`Delete assignment "${title}"?`)) return;
+  await API.deleteAssignment(id);
+  loadAssignments();
+}
+
+async function deleteFile(assignmentId, fileId, btn) {
+  if (!confirm('Delete this file?')) return;
+  await API.deleteFile(assignmentId, fileId);
+  btn.closest('div').remove();
+  loadAssignments(); // refresh card
+}
+
+// ══ GRADING ══
+let _gradingAssignmentId = null;
+
+async function openGradingModal(assignmentId, title) {
+  _gradingAssignmentId = assignmentId;
+  document.getElementById('gradingTitle').textContent = title;
+  document.getElementById('gradingBody').innerHTML =
+    '<div style="text-align:center;padding:32px;color:var(--gray-400)">Loading…</div>';
+  openModal('gradingModal');
+  try {
+    const students = await API.getAssignmentStudents(assignmentId);
+    renderGradingStudents(assignmentId, students);
+  } catch (e) {
+    document.getElementById('gradingBody').innerHTML = `<div class="alert alert-error">${e.message}</div>`;
+  }
+}
+
+function renderGradingStudents(assignmentId, students) {
+  if (!students.length) {
+    document.getElementById('gradingBody').innerHTML =
+      '<div class="empty-state"><div class="icon">👥</div><p>No students assigned to this homework</p></div>';
+    return;
+  }
+
+  const submitted = students.filter(s => s.is_completed).length;
+  document.getElementById('gradingTitle').textContent +=
+    `  —  ${submitted}/${students.length} submitted`;
+
+  document.getElementById('gradingBody').innerHTML = `
+    <div class="grading-list">
+      ${students.map(s => {
+        const hasGrade = s.grade !== null && s.grade !== undefined && String(s.grade).trim() !== '';
+        return `
+        <div class="grading-row ${hasGrade ? 'graded' : ''}" id="grow-${s.id}">
+          <div class="grading-info">
+            <div class="grading-name">${escHtml(s.name)}</div>
+            ${s.class_year ? `<div class="grading-year">${escHtml(s.class_year)}</div>` : ''}
+            <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+              <span class="badge ${s.is_completed ? 'badge-success' : 'badge-gray'}">
+                ${s.is_completed ? '✓ Submitted' : '○ Not submitted'}
+              </span>
+              ${hasGrade ? `<span class="badge badge-primary">Grade: ${escHtml(String(s.grade))}</span>` : ''}
+            </div>
+            ${s.notes ? `<div class="grading-notes">"${escHtml(s.notes)}"</div>` : ''}
+          </div>
+          <div class="grading-inputs">
+            <div>
+              <label>Grade</label>
+              <input type="text" id="grade-${s.id}" class="form-control"
+                     value="${escHtml(String(s.grade ?? ''))}"
+                     placeholder="A, B+, 90/100, Pass…">
+            </div>
+            <div>
+              <label>Feedback</label>
+              <textarea id="feedback-${s.id}" class="form-control" rows="3"
+                        placeholder="Comments to student…">${escHtml(s.feedback ?? '')}</textarea>
+            </div>
+            <button class="btn btn-primary btn-sm" id="savebtn-${s.id}"
+                    onclick="saveGrade(${assignmentId}, ${s.id})">Save</button>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
+async function saveGrade(assignmentId, studentId) {
+  const btn      = document.getElementById(`savebtn-${studentId}`);
+  const grade    = document.getElementById(`grade-${studentId}`).value.trim();
+  const feedback = document.getElementById(`feedback-${studentId}`).value.trim();
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try {
+    await API.gradeStudent(assignmentId, studentId, { grade: grade || null, feedback: feedback || null });
+    btn.textContent = '✓ Saved';
+    btn.className = 'btn btn-success btn-sm';
+    const row = document.getElementById(`grow-${studentId}`);
+    if (grade) row.classList.add('graded'); else row.classList.remove('graded');
+    setTimeout(() => {
+      btn.textContent = 'Save'; btn.className = 'btn btn-primary btn-sm'; btn.disabled = false;
+    }, 2000);
+  } catch (e) {
+    btn.textContent = 'Error'; btn.disabled = false;
+  }
+}
+
+async function saveAllGrades() {
+  const btn = document.getElementById('saveAllBtn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  const saveButtons = document.querySelectorAll('[id^="savebtn-"]');
+  for (const sb of saveButtons) {
+    const studentId = sb.id.replace('savebtn-', '');
+    await saveGrade(_gradingAssignmentId, studentId);
+  }
+  btn.disabled = false; btn.textContent = 'Save All';
+}
+
+// ── Init ──
+async function init() {
+  await loadAssignmentFilters();
+  loadOverview();
+}
+init();
+</script>
+</body>
+</html>
