@@ -59,6 +59,15 @@ const API = (() => {
       }).then(r => r.json());
     },
     deleteFile: (assignmentId, fileId) => req(`/assignments/${assignmentId}/files/${fileId}`, { method: 'DELETE' }),
+    submitFiles: (id, formData) => {
+      const token = getToken();
+      return fetch(`${BASE}/assignments/${id}/submit`, {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: formData,
+      }).then(r => r.json());
+    },
+    deleteSubmissionFile: (assignmentId, fileId) => req(`/assignments/${assignmentId}/submit/${fileId}`, { method: 'DELETE' }),
     getAssignmentStudents: (id) => req(`/assignments/${id}/students`),
     gradeStudent: (assignmentId, studentId, data) => req(`/assignments/${assignmentId}/grade/${studentId}`, { method: 'PUT', body: data }),
   };

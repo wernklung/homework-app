@@ -26,6 +26,16 @@ function attachFiles(assignments) {
   }));
 }
 
+function attachSubmissions(assignments, studentId) {
+  return assignments.map(a => ({
+    ...a,
+    submissions: db.all(
+      'SELECT * FROM submission_files WHERE assignment_id = ? AND student_id = ? ORDER BY uploaded_at',
+      [a.id, studentId]
+    ),
+  }));
+}
+
 // GET assignments — tutor sees all (filterable), student sees only theirs
 router.get('/', authenticate, (req, res) => {
   const { student_id, topic_id, class_year, status } = req.query;
@@ -43,7 +53,7 @@ router.get('/', authenticate, (req, res) => {
     if (status === 'completed') q += ' AND s.is_completed = 1';
     if (status === 'pending')   q += ' AND s.is_completed = 0';
     q += ' ORDER BY a.due_date ASC, a.created_at DESC';
-    return res.json(attachFiles(db.all(q, params)));
+    return res.json(attachSubmissions(attachFiles(db.all(q, params)), req.user.id));
   }
 
   // Tutor view
@@ -115,7 +125,7 @@ router.delete('/:id', authenticate, requireTutor, (req, res) => {
   res.json({ success: true });
 });
 
-// GET all students for an assignment with their completion + grade (tutor only)
+// GET all students for an assignment with their completion + grade + submissions (tutor only)
 router.get('/:id/students', authenticate, requireTutor, (req, res) => {
   const students = db.all(`
     SELECT u.id, u.name, u.username, u.class_year,
@@ -125,7 +135,14 @@ router.get('/:id/students', authenticate, requireTutor, (req, res) => {
     WHERE s.assignment_id = ?
     ORDER BY u.class_year, u.name
   `, [req.params.id]);
-  res.json(students);
+
+  const allSubs = db.all('SELECT * FROM submission_files WHERE assignment_id = ? ORDER BY uploaded_at', [req.params.id]);
+  const byStudent = {};
+  for (const f of allSubs) {
+    if (!byStudent[f.student_id]) byStudent[f.student_id] = [];
+    byStudent[f.student_id].push(f);
+  }
+  res.json(students.map(s => ({ ...s, submissions: byStudent[s.id] || [] })));
 });
 
 // PUT save grade + feedback for one student (tutor only)
@@ -142,6 +159,32 @@ router.put('/:id/complete', authenticate, (req, res) => {
   const completed_at = is_completed ? new Date().toISOString() : null;
   db.prepare('UPDATE assignment_students SET is_completed=?, completed_at=?, notes=? WHERE assignment_id=? AND student_id=?')
     .run(is_completed ? 1 : 0, completed_at, notes || null, req.params.id, req.user.id);
+  res.json({ success: true });
+});
+
+// POST student submits work files
+router.post('/:id/submit', authenticate, upload.array('files', 20), (req, res) => {
+  if (!req.files || !req.files.length) return res.json({ success: true });
+  for (const file of req.files) {
+    db.run(
+      'INSERT INTO submission_files (assignment_id, student_id, filename, original_name, mimetype, size) VALUES (?, ?, ?, ?, ?, ?)',
+      [req.params.id, req.user.id, file.filename, file.originalname, file.mimetype, file.size]
+    );
+  }
+  res.json({ success: true });
+});
+
+// DELETE student removes their own submission file
+router.delete('/:id/submit/:fileId', authenticate, (req, res) => {
+  const file = db.get(
+    'SELECT * FROM submission_files WHERE id = ? AND assignment_id = ? AND student_id = ?',
+    [req.params.fileId, req.params.id, req.user.id]
+  );
+  if (file) {
+    const fp = path.join(UPLOADS_DIR, file.filename);
+    if (fs.existsSync(fp)) fs.unlinkSync(fp);
+    db.run('DELETE FROM submission_files WHERE id = ?', [req.params.fileId]);
+  }
   res.json({ success: true });
 });
 

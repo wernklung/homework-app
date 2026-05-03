@@ -760,6 +760,20 @@ function renderGradingStudents(assignmentId, students) {
               ${hasGrade ? `<span class="badge badge-primary">Grade: ${escHtml(String(s.grade))}</span>` : ''}
             </div>
             ${s.notes ? `<div class="grading-notes">"${escHtml(s.notes)}"</div>` : ''}
+            ${s.submissions && s.submissions.length ? `
+              <div style="margin-top:10px;padding:8px 10px;background:#F0FDF4;border-radius:6px;border:1px solid #BBF7D0">
+                <div style="font-size:11px;font-weight:600;color:#166534;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">📤 Submitted files</div>
+                <div class="ac-files" style="margin-top:0">
+                  ${s.submissions.map(f => {
+                    if (f.mimetype && f.mimetype.startsWith('image/')) {
+                      return `<img src="/uploads/${escHtml(f.filename)}" class="file-thumb"
+                                   onclick="window.open('/uploads/${escHtml(f.filename)}','_blank')"
+                                   title="${escHtml(f.original_name)}">`;
+                    }
+                    return `<a href="/uploads/${escHtml(f.filename)}" target="_blank" class="file-chip">${fileIcon(f.mimetype)} ${escHtml(f.original_name)}</a>`;
+                  }).join('')}
+                </div>
+              </div>` : ''}
           </div>
           <div class="grading-inputs">
             <div>

@@ -9,8 +9,8 @@
 <body>
 <header class="student-header">
   <h1>📚 My Homework</h1>
-  <div style="display:flex;align-items:center;gap:12px">
-    <span id="hdrName" style="font-size:13px;color:#9CA3AF"></span>
+  <div style="display:flex;align-items:center;gap:14px">
+    <span id="hdrName" style="font-size:14px;color:#9CA3AF"></span>
     <button class="btn btn-ghost btn-sm" id="logoutBtn" style="color:#9CA3AF;border-color:rgba(255,255,255,.2)">Logout</button>
   </div>
 </header>
@@ -27,14 +27,14 @@
       <option value="completed">Completed</option>
     </select>
     <button class="btn btn-ghost btn-sm" id="clearFilters">Clear</button>
-    <span id="countLabel" style="color:var(--gray-500);font-size:13px;margin-left:auto"></span>
+    <span id="countLabel" style="color:var(--gray-500);font-size:14px;margin-left:auto"></span>
   </div>
 
   <!-- Assignments -->
   <div class="assignments-grid" id="assignmentsList"></div>
 </div>
 
-<!-- Notes modal -->
+<!-- Mark Done modal -->
 <div class="modal-overlay hidden" id="notesModal">
   <div class="modal">
     <div class="modal-header">
@@ -42,10 +42,15 @@
       <button class="btn-icon" id="closeNotesModal">✕</button>
     </div>
     <div class="modal-body">
-      <p style="color:var(--gray-600);margin-bottom:12px;font-size:13px">Add optional notes about your submission:</p>
       <div class="form-group">
         <label>Notes (optional)</label>
         <textarea id="completionNotes" class="form-control" placeholder="Any notes about your work…"></textarea>
+      </div>
+      <div class="form-group">
+        <label>Submit Your Work (optional)</label>
+        <input type="file" id="submissionFiles" class="form-control" multiple
+               accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip">
+        <small style="color:var(--gray-500);margin-top:5px;display:block">Images, PDFs, Word, Excel, PowerPoint — max 20 MB each</small>
       </div>
     </div>
     <div class="modal-footer">
@@ -92,6 +97,10 @@
     return '📎';
   }
 
+  function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
   function renderFiles(files) {
     if (!files || !files.length) return '';
     return `<div class="ac-files">
@@ -103,6 +112,33 @@
         }
         return `<a href="/uploads/${escHtml(f.filename)}" target="_blank" class="file-chip">${fileIcon(f.mimetype)} ${escHtml(f.original_name)}</a>`;
       }).join('')}
+    </div>`;
+  }
+
+  function renderSubmissions(a) {
+    if (!a.submissions) return '';
+    return `<div class="submission-section">
+      <div class="section-label">📤 Your submitted files</div>
+      <div class="ac-files" style="margin-top:4px">
+        ${(a.submissions || []).map(f => {
+          const inner = (f.mimetype && f.mimetype.startsWith('image/'))
+            ? `<img src="/uploads/${escHtml(f.filename)}" class="file-thumb"
+                    onclick="window.open('/uploads/${escHtml(f.filename)}','_blank')"
+                    title="${escHtml(f.original_name)}">`
+            : `<a href="/uploads/${escHtml(f.filename)}" target="_blank" class="file-chip">${fileIcon(f.mimetype)} ${escHtml(f.original_name)}</a>`;
+          return `<div style="display:flex;align-items:center;gap:3px">
+            ${inner}
+            <button class="btn-icon" style="font-size:12px;color:var(--danger)"
+                    onclick="deleteSubmission(${a.id},${f.id})" title="Remove file">✕</button>
+          </div>`;
+        }).join('')}
+        <label style="cursor:pointer">
+          <span class="file-chip" style="border-style:dashed;cursor:pointer">+ Add files</span>
+          <input type="file" multiple style="display:none"
+                 accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip"
+                 onchange="addSubmissionFiles(${a.id}, this)">
+        </label>
+      </div>
     </div>`;
   }
 
@@ -141,16 +177,13 @@
         </div>
         ${a.description ? `<div class="ac-desc">${escHtml(a.description)}</div>` : ''}
         ${renderFiles(a.files)}
-        ${a.notes ? `<div class="ac-desc" style="margin-top:8px;background:var(--success-light);padding:8px 10px;border-radius:6px;color:#065F46"><strong>Your notes:</strong> ${escHtml(a.notes)}</div>` : ''}
-        ${a.completed_at ? `<div style="font-size:12px;color:var(--gray-400);margin-top:8px">Completed on ${new Date(a.completed_at).toLocaleString()}</div>` : ''}
+        ${a.notes ? `<div class="ac-desc" style="margin-top:10px;background:var(--success-light);padding:10px 12px;border-radius:6px;color:#065F46"><strong>Your notes:</strong> ${escHtml(a.notes)}</div>` : ''}
+        ${renderSubmissions(a)}
+        ${a.completed_at ? `<div style="font-size:13px;color:var(--gray-400);margin-top:8px">Completed on ${new Date(a.completed_at).toLocaleString()}</div>` : ''}
         ${a.grade ? `<div class="grade-display"><span class="grade-badge">🎓 ${escHtml(String(a.grade))}</span></div>` : ''}
         ${a.feedback ? `<div class="feedback-box"><strong>Teacher feedback:</strong> ${escHtml(a.feedback)}</div>` : ''}
       </div>`;
     }).join('');
-  }
-
-  function escHtml(s) {
-    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
   async function loadAssignments() {
@@ -172,17 +205,46 @@
   function openNotesModal(id) {
     pendingCompleteId = id;
     document.getElementById('completionNotes').value = '';
+    document.getElementById('submissionFiles').value = '';
     document.getElementById('notesModal').classList.remove('hidden');
   }
 
   document.getElementById('closeNotesModal').onclick = () => document.getElementById('notesModal').classList.add('hidden');
   document.getElementById('cancelNotes').onclick = () => document.getElementById('notesModal').classList.add('hidden');
   document.getElementById('confirmComplete').onclick = async () => {
-    const notes = document.getElementById('completionNotes').value.trim();
-    await API.completeAssignment(pendingCompleteId, { is_completed: true, notes });
-    document.getElementById('notesModal').classList.add('hidden');
-    loadAssignments();
+    const btn = document.getElementById('confirmComplete');
+    btn.disabled = true; btn.textContent = 'Saving…';
+    try {
+      const notes = document.getElementById('completionNotes').value.trim();
+      await API.completeAssignment(pendingCompleteId, { is_completed: true, notes });
+
+      const files = document.getElementById('submissionFiles').files;
+      if (files.length) {
+        const fd = new FormData();
+        for (const f of files) fd.append('files', f);
+        await API.submitFiles(pendingCompleteId, fd);
+      }
+
+      document.getElementById('notesModal').classList.add('hidden');
+      loadAssignments();
+    } finally {
+      btn.disabled = false; btn.textContent = 'Mark Complete';
+    }
   };
+
+  async function addSubmissionFiles(assignmentId, input) {
+    if (!input.files.length) return;
+    const fd = new FormData();
+    for (const f of input.files) fd.append('files', f);
+    await API.submitFiles(assignmentId, fd);
+    loadAssignments();
+  }
+
+  async function deleteSubmission(assignmentId, fileId) {
+    if (!confirm('Remove this file?')) return;
+    await API.deleteSubmissionFile(assignmentId, fileId);
+    loadAssignments();
+  }
 
   document.getElementById('filterTopic').onchange = loadAssignments;
   document.getElementById('filterStatus').onchange = loadAssignments;

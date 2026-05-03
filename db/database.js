@@ -127,6 +127,20 @@ async function initDatabase() {
     );
   `);
 
+  // New table for student-submitted work
+  sqlDb.exec(`
+    CREATE TABLE IF NOT EXISTS submission_files (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      assignment_id INTEGER,
+      student_id INTEGER,
+      filename TEXT NOT NULL,
+      original_name TEXT NOT NULL,
+      mimetype TEXT,
+      size INTEGER,
+      uploaded_at DATETIME DEFAULT (datetime('now'))
+    );
+  `);
+
   // Safe migrations — add columns to existing databases without failing if they already exist
   try { sqlDb.run('ALTER TABLE assignment_students ADD COLUMN grade TEXT'); } catch (_) {}
   try { sqlDb.run('ALTER TABLE assignment_students ADD COLUMN feedback TEXT'); } catch (_) {}
